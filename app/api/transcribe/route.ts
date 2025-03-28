@@ -5,6 +5,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
+interface ErrorResponse {
+  status: number;
+  details?: string;
+  message: string;
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -32,19 +38,17 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(response)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as ErrorResponse;
     // 자세한 에러 로깅
     console.error('Transcription error details:', {
-      message: error.message,
-      status: error.status,
-      response: error.response?.data
+      message: err.message,
+      status: err.status,
+      response: err.details
     })
 
     return NextResponse.json(
-      { 
-        error: 'Failed to transcribe audio',
-        details: error.message 
-      },
+      { error: err.message || 'Transcription failed' },
       { status: 500 }
     )
   }
