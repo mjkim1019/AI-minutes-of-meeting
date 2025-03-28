@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
-import { FileText, Loader2, Upload, Download, Save } from "lucide-react"
+import { FileText, Loader2, Upload, Download } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,12 @@ interface SpeechToTextProps {
   onTranscriptUpdate?: (transcript: string) => void
 }
 
+declare global {
+  interface Window {
+    webkitAudioContext: typeof AudioContext;
+  }
+}
+
 export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [transcript, setTranscript] = useState<string>('')
@@ -21,7 +27,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
   const [processTime, setProcessTime] = useState<string>('')
   const [diarizedText, setDiarizedText] = useState<string>('')
   const [speakerCount, setSpeakerCount] = useState<number>(2)
-  const [summary, setSummary] = useState<string>('')
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -45,7 +50,7 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
       } else {
         // 기존 오디오 파일 처리 로직
         if (file.size > 25 * 1024 * 1024) {
-          setTranscript('파일 크기는 25MB를 초과할 수 없습니다.')
+          setTranscript("파일 크기는 25MB를 초과할 수 없습니다.")
           return
         }
 
@@ -94,18 +99,8 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
     }
   }
 
-  const getSupportedMimeType = () => {
-    const types = [
-      'audio/wav',
-      'audio/mp3',
-      'audio/ogg',
-      'audio/webm'
-    ]
-    return types.find(type => MediaRecorder.isTypeSupported(type)) || 'audio/wav'
-  }
-
   const convertToWav = async (audioBlob: Blob): Promise<Blob> => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
     const arrayBuffer = await audioBlob.arrayBuffer()
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
     
@@ -250,42 +245,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
     setTranscript('')
     setDiarizedText('')
     setSelectedFile(null)
-  }
-
-  const generateSummary = async () => {
-    if (!diarizedText) return
-    
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: diarizedText })
-      })
-
-      if (!response.ok) {
-        throw new Error('Summary generation failed')
-      }
-
-      const data = await response.json()
-      setSummary(data.summary)
-
-      // 회의록 다운로드
-      const element = document.createElement('a')
-      const file = new Blob([data.summary], { type: 'text/plain' })
-      element.href = URL.createObjectURL(file)
-      element.download = `meeting_summary_${new Date().toISOString().slice(0,10)}.txt`
-      document.body.appendChild(element)
-      element.click()
-      document.body.removeChild(element)
-    } catch (error) {
-      console.error('Error generating summary:', error)
-      toast.error('요약 생성에 실패했습니다.')
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   return (
