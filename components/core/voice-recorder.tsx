@@ -16,7 +16,6 @@ export function VoiceRecorder() {
   const [isLoading, setIsLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [showPermissionDialog, setShowPermissionDialog] = useState(false)
@@ -32,7 +31,7 @@ export function VoiceRecorder() {
       }
       return true
     } catch (err) {
-      // 브라우저가 permissions API를 지원하지 않는 경우
+      console.error('브라우저가 permissions API를 지원하지 않습니다:', err)
       return true
     }
   }
@@ -75,7 +74,6 @@ export function VoiceRecorder() {
         const audioBlob = new Blob(chunks, { type: mimeType })
         const url = URL.createObjectURL(audioBlob)
         setAudioUrl(url)
-        setAudioChunks(chunks)
       }
 
       setMediaRecorder(recorder)
@@ -92,7 +90,6 @@ export function VoiceRecorder() {
   }
 
   const startRecording = () => {
-    setAudioChunks([])
     setAudioUrl(null)
     if (mediaRecorder) {
       mediaRecorder.start()
@@ -185,7 +182,7 @@ export function VoiceRecorder() {
               <ol className="list-decimal list-inside space-y-1 text-sm">
                 <li>브라우저 주소 표시줄의 자물쇠/설정 아이콘을 클릭하세요</li>
                 <li>사이트 설정 또는 권한 설정을 찾으세요</li>
-                <li>마이크 권한을 "허용"으로 변경하세요</li>
+                <li>마이크 권한을 &quot;허용&quot;으로 변경하세요</li>
                 <li>페이지를 새로고침하세요</li>
               </ol>
             </DialogDescription>
