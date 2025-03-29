@@ -53,10 +53,16 @@ export async function DELETE(
 
 // PATCH /api/meetings/[id]
 export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest
 ) {
   try {
+    // URL에서 id 추출
+    const id = request.nextUrl.pathname.split('/').pop()
+
+    if (!id) {
+      return NextResponse.json({ error: '회의 ID가 없습니다.' }, { status: 400 })
+    }
+
     const supabase = createRouteHandlerClient({
       cookies: () => cookies()
     })
@@ -69,15 +75,28 @@ export async function PATCH(
         summary: body.summary,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) throw error
     return NextResponse.json({ message: 'Meeting updated successfully' })
-  } catch (error) {
-    console.error('Error updating meeting:', error)
+  } catch (error: unknown) {
+    console.error('회의 수정 중 에러 발생:', error)
+
+    let status = 500
+    let message = 'Error updating meeting:'
+
+    if (error instanceof Error) {
+      message = error.message
+    }
+
+    // SupabaseError나 특정 에러 객체 구조가 있다면 여기서 추가로 처리
+    if (typeof error === 'object' && error !== null && 'status' in error) {
+      status = (error as { status?: number }).status || 500
+    }
+
     return NextResponse.json(
-      { error: 'Failed to update meeting' },
-      { status: 500 }
+      { error: message },
+      { status }
     )
   }
 } 
