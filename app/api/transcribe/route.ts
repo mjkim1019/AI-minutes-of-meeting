@@ -5,12 +5,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-interface ErrorResponse {
-  status: number;
-  details?: string;
-  message: string;
-}
-
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -39,17 +33,23 @@ export async function POST(request: Request) {
 
     return NextResponse.json(response)
   } catch (error: unknown) {
-    const err = error as ErrorResponse;
-    // 자세한 에러 로깅
-    console.error('Transcription error details:', {
-      message: err.message,
-      status: err.status,
-      response: err.details
-    })
+    console.error('회의 녹음 중 에러 발생:', error)
+
+    let status = 500
+    let message = 'Error transcribing audio:'
+
+    if (error instanceof Error) {
+      message = error.message
+    }
+
+    // SupabaseError나 특정 에러 객체 구조가 있다면 여기서 추가로 처리
+    if (typeof error === 'object' && error !== null && 'status' in error) {
+      status = (error as { status?: number }).status || 500
+    }
 
     return NextResponse.json(
-      { error: err.message || 'Transcription failed' },
-      { status: 500 }
+      { error: message },
+      { status }
     )
   }
 } 
