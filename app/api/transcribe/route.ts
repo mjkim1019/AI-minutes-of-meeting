@@ -32,20 +32,24 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(response)
-  } catch (error: any) {
-    // 자세한 에러 로깅
-    console.error('Transcription error details:', {
-      message: error.message,
-      status: error.status,
-      response: error.response?.data
-    })
+  } catch (error: unknown) {
+    console.error('회의 녹음 중 에러 발생:', error)
+
+    let status = 500
+    let message = 'Error transcribing audio:'
+
+    if (error instanceof Error) {
+      message = error.message
+    }
+
+    // SupabaseError나 특정 에러 객체 구조가 있다면 여기서 추가로 처리
+    if (typeof error === 'object' && error !== null && 'status' in error) {
+      status = (error as { status?: number }).status || 500
+    }
 
     return NextResponse.json(
-      { 
-        error: 'Failed to transcribe audio',
-        details: error.message 
-      },
-      { status: 500 }
+      { error: message },
+      { status }
     )
   }
 } 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,11 +34,8 @@ export function MeetingList({ onLatestMeeting }: MeetingListProps) {
   const [shareId, setShareId] = useState<string | null>(null)
   const [emailTo, setEmailTo] = useState('')
 
-  useEffect(() => {
-    fetchMeetings()
-  }, [])
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     try {
       const response = await fetch('/api/meetings')
       const data = await response.json()
@@ -55,7 +52,11 @@ export function MeetingList({ onLatestMeeting }: MeetingListProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [onLatestMeeting])
+
+    useEffect(() => {
+    fetchMeetings()
+  }, [fetchMeetings])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('ko-KR', {
