@@ -41,8 +41,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [audioDuration, setAudioDuration] = useState<string>('')
   const [processTime, setProcessTime] = useState<string>('')
-  const [diarizedText, setDiarizedText] = useState<string>('')
-  const [speakerCount, setSpeakerCount] = useState<number>(2)
   const [glossary, setGlossary] = useState<string>('')
 
   const formatDuration = (seconds: number) => {
@@ -61,9 +59,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
         const text = await file.text()
         setTranscript(text)
         setSelectedFile(file)
-        setDiarizedText(text) // 텍스트 파일의 경우 바로 diarizedText 설정
-        // 바로 화자 구분 시작
-        await diarizeText(text)
       } else {
         // 기존 오디오 파일 처리 로직
         if (file.size > 25 * 1024 * 1024) {
@@ -183,32 +178,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
     }
   }
 
-  const diarizeText = async (text: string) => {
-    try {
-      const response = await fetch('/api/diarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          text,
-          speakerCount 
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Diarization failed')
-      }
-
-      const data = await response.json()
-      setDiarizedText(data.diarizedText)
-    } catch (error) {
-      console.error('Error diarizing text:', error)
-      toast.error('화자 구분에 실패했습니다.')
-      setDiarizedText(text) // 실패 시 원본 텍스트 사용
-    }
-  }
-
   const downloadText = () => {
     if (!transcript) return
     
@@ -247,9 +216,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
       if ('text' in data && 'summary' in data && 'title' in data) {
         setTranscript(data.text)
         onTranscriptUpdate?.(data.text)
-
-        // 텍스트 변환 후 화자 구분 시작
-        await diarizeText(data.text)
         
         // 자동으로 텍스트 파일 다운로드
         downloadText()
@@ -266,7 +232,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
 
   const handleSaveComplete = () => {
     setTranscript('')
-    setDiarizedText('')
     setSelectedFile(null)
   }
 
@@ -293,19 +258,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
 
         <GlossaryButton onGlossaryUpdate={setGlossary} />
 
-        <div className="flex items-center gap-2">
-          <Label htmlFor="speaker-count" className="text-sm">화자 수:</Label>
-          <Input
-            id="speaker-count"
-            type="number"
-            min={1}
-            max={10}
-            value={speakerCount}
-            onChange={(e) => setSpeakerCount(Number(e.target.value))}
-            className="w-20"
-          />
-        </div>
-
         {selectedFile && selectedFile.type !== 'text/plain' && (
           <Button 
             variant="default"
@@ -322,7 +274,7 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
         )}
 
         <MeetingSummary 
-          diarizedText={transcript}
+          transcript={transcript}
           onSaveComplete={handleSaveComplete}
         />
       </div>
@@ -354,17 +306,6 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
           )}
         </div>
       </Card>
-
-      {diarizedText && (
-        <Card className="p-4 bg-muted">
-          <div className="space-y-4">
-            <h3 className="font-medium">화자 구분된 내용:</h3>
-            <div className="text-sm text-gray-600 whitespace-pre-line">
-              {diarizedText}
-            </div>
-          </div>
-        </Card>
-      )}
     </div>
   )
 } 

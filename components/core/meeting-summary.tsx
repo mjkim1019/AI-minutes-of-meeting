@@ -13,13 +13,13 @@ import {
 } from "@/components/ui/dialog"
 
 interface MeetingSummaryProps {
-  diarizedText: string
+  transcript: string
   onSummaryGenerated?: (summary: string) => void
   onSaveComplete?: () => void
 }
 
 export function MeetingSummary({ 
-  diarizedText,
+  transcript,
   onSummaryGenerated,
   onSaveComplete,
 }: MeetingSummaryProps) {
@@ -30,7 +30,7 @@ export function MeetingSummary({
   const [isOpen, setIsOpen] = useState(false)
 
   const generateSummary = async () => {
-    if (!diarizedText) return
+    if (!transcript) return
     
     try {
       setIsLoading(true)
@@ -39,7 +39,7 @@ export function MeetingSummary({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: diarizedText })
+        body: JSON.stringify({ text: transcript })
       })
 
       if (!response.ok) {
@@ -69,7 +69,7 @@ export function MeetingSummary({
   }
 
   const saveMeeting = async () => {
-    if (!diarizedText || !summary) {
+    if (!transcript || !summary) {
       toast.error('회의록 내용이 없습니다.')
       return
     }
@@ -88,8 +88,8 @@ export function MeetingSummary({
         },
         body: JSON.stringify({
           title: title.trim(),
-          original_text: diarizedText,
-          diarized_text: diarizedText,
+          original_text: transcript,
+          diarized_text: transcript,
           summary
         })
       })
@@ -116,7 +116,7 @@ export function MeetingSummary({
       <Button
         variant="secondary"
         onClick={generateSummary}
-        disabled={isLoading || !diarizedText}
+        disabled={isLoading || !transcript}
       >
         {isLoading ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
