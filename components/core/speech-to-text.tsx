@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button"
 import { FileText, Loader2, Upload, Download } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"  
 import { MeetingSummary } from "./meeting-summary"
 import { GlossaryButton } from './glossary-button'
 
