@@ -68,21 +68,30 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
 
         // 오디오 길이 확인
         const audio = new Audio()
-        audio.src = URL.createObjectURL(file)
-        audio.onloadedmetadata = () => {
-          const duration = audio.duration
+        const objectUrl = URL.createObjectURL(file)
+        audio.src = objectUrl
+
+        // WebM 파일의 경우 AudioContext를 사용하여 길이 계산
+        if (file.type === 'video/webm') {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+          const arrayBuffer = await file.arrayBuffer()
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+          const duration = audioBuffer.duration
           setAudioDuration(formatDuration(duration))
-          
-          // 10분(600초) 제한
-          // if (duration > 600) {
-          //   setTranscript('오디오 길이는 10분을 초과할 수 없습니다.')
-          //   setSelectedFile(null)
-          //   return
-          // }
-          
           setSelectedFile(file)
           setProcessTime('')
           setTranscript('')
+          URL.revokeObjectURL(objectUrl)
+        } else {
+          // 일반 오디오 파일 처리
+          audio.onloadedmetadata = () => {
+            const duration = audio.duration
+            setAudioDuration(formatDuration(duration))
+            setSelectedFile(file)
+            setProcessTime('')
+            setTranscript('')
+            URL.revokeObjectURL(objectUrl)
+          }
         }
       }
     } catch (error) {
