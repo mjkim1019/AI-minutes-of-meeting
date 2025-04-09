@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"  
 import { MeetingSummary } from "./meeting-summary"
+import { GlossaryButton } from './glossary-button'
 
 interface SpeechToTextProps {
   onTranscriptUpdate?: (transcript: string) => void
@@ -19,6 +20,21 @@ declare global {
   }
 }
 
+// 응답 타입 정의
+interface TranscriptionSuccess {
+  text: string;
+  summary: string;
+  title: string;
+  success: true;
+}
+
+interface TranscriptionError {
+  details: string;
+  success: false;
+}
+
+type TranscriptionResponse = TranscriptionSuccess | TranscriptionError;
+
 export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [transcript, setTranscript] = useState<string>('')
@@ -27,6 +43,7 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
   const [processTime, setProcessTime] = useState<string>('')
   const [diarizedText, setDiarizedText] = useState<string>('')
   const [speakerCount, setSpeakerCount] = useState<number>(2)
+  const [glossary, setGlossary] = useState<string>('')
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -62,11 +79,11 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
           setAudioDuration(formatDuration(duration))
           
           // 10분(600초) 제한
-          if (duration > 600) {
-            setTranscript('오디오 길이는 10분을 초과할 수 없습니다.')
-            setSelectedFile(null)
-            return
-          }
+          // if (duration > 600) {
+          //   setTranscript('오디오 길이는 10분을 초과할 수 없습니다.')
+          //   setSelectedFile(null)
+          //   return
+          // }
           
           setSelectedFile(file)
           setProcessTime('')
@@ -213,26 +230,32 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
       formData.append('file', wavBlob, 'audio.wav')
       formData.append('model', 'whisper-1')
       formData.append('language', 'ko')
+      formData.append('glossary', glossary)
 
       const response = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
       })
 
+      const data = await response.json() as TranscriptionResponse
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.details || 'Transcription failed')
+        const errorMessage = 'details' in data ? data.details : 'Transcription failed'
+        throw new Error(errorMessage)
       }
       
-      const data = await response.json()
-      setTranscript(data.text)
-      onTranscriptUpdate?.(data.text)
+      if ('text' in data && 'summary' in data && 'title' in data) {
+        setTranscript(data.text)
+        onTranscriptUpdate?.(data.text)
 
-      // 텍스트 변환 후 화자 구분 시작
-      await diarizeText(data.text)
-      
-      // 자동으로 텍스트 파일 다운로드
-      downloadText()
+        // 텍스트 변환 후 화자 구분 시작
+        await diarizeText(data.text)
+        
+        // 자동으로 텍스트 파일 다운로드
+        downloadText()
+      } else {
+        throw new Error('Invalid response format')
+      }
     } catch (error) {
       console.error('Error transcribing audio:', error)
       setTranscript('오류가 발생했습니다: ' + (error as Error).message)
@@ -267,6 +290,8 @@ export function SpeechToText({ onTranscriptUpdate }: SpeechToTextProps) {
             파일 업로드 (.txt, 오디오)
           </Button>
         </div>
+
+        <GlossaryButton onGlossaryUpdate={setGlossary} />
 
         <div className="flex items-center gap-2">
           <Label htmlFor="speaker-count" className="text-sm">화자 수:</Label>
